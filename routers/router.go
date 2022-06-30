@@ -14,10 +14,10 @@ func Router() *mux.Router {
 	router.HandleFunc("/users/login", UserController.Login).Methods("POST")
 
 	//movie router
-	router.HandleFunc("/users/search", MovieController.SearchAMovieById).Methods("POST")
+	router.HandleFunc("/users/search/{id}", MovieController.SearchAMovieById).Methods("GET")
 	router.HandleFunc("/users/create", MovieController.InsertAMovie).Methods("POST")
 	router.HandleFunc("/users/displayAll", MovieController.ShowAllMovies).Methods("GET")
-	router.HandleFunc("/users/deleteOne", MovieController.DeleteOneMovie).Methods("DELETE")
+	router.HandleFunc("/users/deleteOne/{id}", MovieController.DeleteOneMovie).Methods("DELETE")
 	router.HandleFunc("/users/deleteAll", MovieController.DeleteAllMovies).Methods("DELETE")
 	return router
 }

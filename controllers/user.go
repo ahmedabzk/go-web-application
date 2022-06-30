@@ -13,18 +13,22 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+var userCol = "users"
+
 // SignUp function
 func SignUp(res http.ResponseWriter, req *http.Request) {
 	res.Header().Set("Content-Type", "application/json")
 
+	client, err := helpers.Setup()
+	collection := client.Database(helpers.DbName).Collection(userCol)
 	var user models.User
 	_ = json.NewDecoder(req.Body).Decode(&user)
 	user.Password = middleware.GetHash([]byte(user.Password))
-	result, err := helpers.Collection.InsertOne(context.Background(), user)
+	result, er := collection.InsertOne(context.Background(), user)
 
-	if err != nil {
+	if er != nil {
 		res.WriteHeader(http.StatusInternalServerError)
-		res.Write([]byte(`{"message": "` + err.Error() + `"}`))
+		res.Write([]byte(`{"message": "` + er.Error() + `"}`))
 		if err != nil {
 			log.Fatal(err)
 			return
@@ -38,16 +42,22 @@ func SignUp(res http.ResponseWriter, req *http.Request) {
 func Login(res http.ResponseWriter, req *http.Request) {
 	res.Header().Set("Content-Type", "application/json")
 
+	client, err := helpers.Setup()
+	if err != nil {
+		log.Fatal(err)
+	}
+	collection := client.Database(helpers.DbName).Collection(userCol)
 	var user models.User
 	var dbUser models.User
 	_ = json.NewDecoder(req.Body).Decode(&user)
 
 	filter := bson.M{"email": user.Email}
-	err := helpers.Collection.FindOne(context.Background(), filter).Decode(&dbUser)
 
-	if err != nil {
+	er := collection.FindOne(context.Background(), filter).Decode(&dbUser)
+
+	if er != nil {
 		res.WriteHeader(http.StatusInternalServerError)
-		res.Write([]byte(`{"message": "` + err.Error() + `"}`))
+		res.Write([]byte(`{"message": "` + er.Error() + `"}`))
 	}
 
 	userPass := []byte(user.Password)
@@ -61,11 +71,11 @@ func Login(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 	// generate the token
-	jwtToken, err := helpers.GenerateJwt()
+	jwtToken, errs := helpers.GenerateJwt()
 
-	if err != nil {
+	if errs != nil {
 		res.WriteHeader(http.StatusInternalServerError)
-		res.Write([]byte(`{"message": "` + err.Error() + `"}`))
+		res.Write([]byte(`{"message": "` + errs.Error() + `"}`))
 		return
 	}
 	res.Write([]byte(`{"token": "` + jwtToken + `"}`))

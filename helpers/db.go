@@ -2,46 +2,51 @@ package helpers
 
 import (
 	"context"
-	"fmt"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"log"
 	"os"
+	"sync"
 
 	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-const dbName = "ShowMovies"
-const colName = "users"
+const (
+	DbName = "ShowMovies"
+)
 
-var Collection *mongo.Collection
+var clientInstance *mongo.Client
+var clientInstanceError error
+var mongoOnce sync.Once
 
-func init() {
-	// load env files
-	err := godotenv.Load(".env")
+func Setup() (*mongo.Client, error) {
+	mongoOnce.Do(func() {
 
-	if err != nil {
-		println("could not find the env file")
-	}
-	// get the url from the .env
-	uri := os.Getenv("MONGO_URI")
-	if uri == "" {
-		log.Fatal("provide a mongo uri variable")
-	}
-	// apply the url
-	clientOptions := options.Client().ApplyURI(uri)
-	// connect to mongodb
-	client, err := mongo.Connect(context.TODO(), clientOptions)
-	// check for err
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer func(client *mongo.Client, ctx context.Context) {
-		err := client.Disconnect(ctx)
+		err := godotenv.Load(".env")
+
 		if err != nil {
-			log.Fatal(err)
+			println("could not find the env file")
 		}
-	}(client, context.Background())
-	Collection = client.Database(dbName).Collection(colName)
-	fmt.Println("mongodb connection success")
+		// get the url from the .env
+		uri := os.Getenv("MONGO_URI")
+		if uri == "" {
+			log.Fatal("provide a mongo uri variable")
+		}
+		// apply the url
+		clientOptions := options.Client().ApplyURI(uri)
+		// connect to mongodb
+		client, er := mongo.Connect(context.TODO(), clientOptions)
+		// check for err
+		if er != nil {
+			clientInstanceError = er
+		}
+		// Check the connection
+		err = client.Ping(context.TODO(), nil)
+		if err != nil {
+			clientInstanceError = err
+		}
+		clientInstance = client
+	})
+	return clientInstance, clientInstanceError
+
 }
